@@ -1,0 +1,15 @@
+﻿# Big files live on Google Drive, never in Git
+data/
+checkpoints/
+*.tif
+*.pt
+*.pth
+*.ckpt
+*.zip
+
+# Files Python and Jupyter make by themselves
+__pycache__/
+.ipynb_checkpoints/
+
+# Secret keys, never share these
+.env

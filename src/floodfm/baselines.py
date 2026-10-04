@@ -1,4 +1,4 @@
-﻿"""Baselines that do not learn from the training data."""
+﻿"""Baselines that do not use deep learning."""
 import numpy as np
 from skimage.filters import threshold_otsu
 
@@ -15,3 +15,12 @@ def otsu_vh(s1):
     threshold = float(threshold_otsu(vh[has_radar]))
     pred[has_radar & (vh < threshold)] = 1
     return pred, threshold
+
+
+def fixed_vh(s1, threshold):
+    """Fixed threshold on the VH band (index 1): water where VH < threshold (dB).
+    The threshold is selected on the training split only. Pixels without radar data are predicted as not water."""
+    vh = s1[1]
+    pred = np.zeros(vh.shape, dtype="uint8")
+    pred[np.isfinite(vh) & (vh < threshold)] = 1
+    return pred

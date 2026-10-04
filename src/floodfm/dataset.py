@@ -8,11 +8,14 @@ from torch.utils.data import Dataset
 
 from floodfm.data import read_split, read_chip
 
+# Positions of the six Prithvi bands (B2, B3, B4, B8A, B11, B12) in the 13-band S2Hand files
+S2_6_INDICES = [1, 2, 3, 8, 11, 12]
+
 
 class Sen1Floods11(Dataset):
     """One item is one chip: a normalised image (C, H, W) float32 and a label (H, W) int64.
 
-    modality: "s1" (VV, VH) or "s2" (13 bands).
+    modality: "s1" (VV, VH), "s2" (13 bands) or "s2_6" (the six Prithvi bands B2, B3, B4, B8A, B11, B12).
     Normalisation uses per-band mean and std from the training split (stats_path).
     Missing input values (NaN in S1, 0 in S2) are set to 0 after normalisation, which equals the training mean.
     Label values: 1 water, 0 not water, -1 no data (ignored by the loss and the scores).
@@ -23,9 +26,14 @@ class Sen1Floods11(Dataset):
         self.data_root = data_root
         self.chip_ids = read_split(data_root, split)
         self.modality = modality
-        stats = json.loads(Path(stats_path).read_text())[modality]
-        self.mean = np.array(stats["mean"], dtype="float32")[:, None, None]
-        self.std = np.array(stats["std"], dtype="float32")[:, None, None]
+        all_stats = json.loads(Path(stats_path).read_text())
+        if modality == "s2_6":
+            mean = [all_stats["s2"]["mean"][i] for i in S2_6_INDICES]
+            std = [all_stats["s2"]["std"][i] for i in S2_6_INDICES]
+        else:
+            mean, std = all_stats[modality]["mean"], all_stats[modality]["std"]
+        self.mean = np.array(mean, dtype="float32")[:, None, None]
+        self.std = np.array(std, dtype="float32")[:, None, None]
         self.augment = augment
 
     def __len__(self):
@@ -33,7 +41,7 @@ class Sen1Floods11(Dataset):
 
     def __getitem__(self, idx):
         chip = read_chip(self.data_root, self.chip_ids[idx])
-        image = chip[self.modality]
+        image = chip["s2"][S2_6_INDICES] if self.modality == "s2_6" else chip[self.modality]
         missing = ~np.isfinite(image) if self.modality == "s1" else (image == 0)
         image = (image - self.mean) / self.std
         image[missing] = 0.0

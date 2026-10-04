@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 
 from floodfm.dataset import Sen1Floods11
 
-IN_CHANNELS = {"s1": 2, "s2": 13}
+IN_CHANNELS = {"s1": 2, "s2": 13, "s2_6": 6}
 
 
 def set_seed(seed):

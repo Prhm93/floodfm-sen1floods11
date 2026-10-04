@@ -120,21 +120,26 @@ def validate(model, loader, device, loss_fn):
 
 
 def train_prithvi(data_root, checkpoint_root, mode, seed, epochs=100, batch_size=8,
-                  lr=1e-4, weight_decay=0.1, num_workers=2):
+                  lr=1e-4, weight_decay=0.1, num_workers=2, accum_steps=1):
     """Trains one Prithvi run (mode "frozen" or "full"). Saves last.pt, best.pt and history.json in
-    checkpoint_root/prithvi_<mode>_seed<seed>. If last.pt exists, training continues from the next epoch."""
+    checkpoint_root/prithvi_<mode>_seed<seed>. If last.pt exists, training continues from the next epoch.
+
+    accum_steps > 1 enables gradient accumulation: each step loads batch_size // accum_steps chips, and the
+    weights are updated after accum_steps steps, so one update still uses batch_size chips. An incomplete
+    group at the end of an epoch is discarded, in the same way as drop_last for a full batch."""
     device = torch.device("cuda")
     run_dir = Path(checkpoint_root) / f"prithvi_{mode}_seed{seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
     set_seed(seed)
+    micro_batch = batch_size // accum_steps
 
-    # Data: training chips with D4 transforms; validation chips without transforms
+    # Data: training chips with D4 transforms (micro-batches); validation chips without transforms
     train_ds = PrithviSen1Floods11(data_root, "train", augment=True)
     valid_ds = PrithviSen1Floods11(data_root, "valid", augment=False)
     generator = torch.Generator().manual_seed(seed)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=True,
+    train_loader = DataLoader(train_ds, batch_size=micro_batch, shuffle=True, drop_last=True,
                               num_workers=num_workers, generator=generator)
-    valid_loader = DataLoader(valid_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    valid_loader = DataLoader(valid_ds, batch_size=micro_batch, shuffle=False, num_workers=num_workers)
 
     # Model, optimiser over trainable weights only, plateau schedule on validation loss, scaler, Dice loss
     model = build_prithvi(freeze_backbone=(mode == "frozen")).to(device)
@@ -161,17 +166,26 @@ def train_prithvi(data_root, checkpoint_root, mode, seed, epochs=100, batch_size
     for epoch in range(start_epoch, epochs + 1):
         t0 = time.time()
         model.train()
-        loss_sum = 0.0
-        for images, labels in train_loader:
+        optimizer.zero_grad(set_to_none=True)
+        loss_sum, n_updates = 0.0, 0
+        for step, (images, labels) in enumerate(train_loader):
             images, labels = images.to(device), labels.to(device)
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 logits = logits_of(model(images))
-            loss = loss_fn(logits.float(), labels)
-            optimizer.zero_grad(set_to_none=True)
+            # Loss divided by accum_steps, so that the summed gradients equal the mean over the full batch
+            loss = loss_fn(logits.float(), labels) / accum_steps
             scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            loss_sum += loss.item()
+            loss_sum += loss.item() * accum_steps
+
+            # Weight update after accum_steps micro-batches
+            if (step + 1) % accum_steps == 0:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad(set_to_none=True)
+                n_updates += 1
+
+        # Gradients of an incomplete final group are discarded
+        optimizer.zero_grad(set_to_none=True)
 
         # Learning rate of this epoch, then validation, then the plateau schedule step on the validation loss
         epoch_lr = optimizer.param_groups[0]["lr"]
@@ -183,6 +197,9 @@ def train_prithvi(data_root, checkpoint_root, mode, seed, epochs=100, batch_size
             "valid_loss": valid_loss,
             "valid_iou": valid_iou,
             "lr": epoch_lr,
+            "micro_batch": micro_batch,
+            "accum_steps": accum_steps,
+            "updates": n_updates,
             "seconds": time.time() - t0,
         })
 

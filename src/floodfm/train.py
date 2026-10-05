@@ -9,8 +9,9 @@ import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
 from segmentation_models_pytorch.losses import DiceLoss
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler
 
+from floodfm.data import read_split
 from floodfm.dataset import Sen1Floods11
 
 IN_CHANNELS = {"s1": 2, "s2": 13, "s2_6": 6}
@@ -47,20 +48,28 @@ def validate(model, loader, device):
 
 
 def train(data_root, stats_path, checkpoint_root, modality, seed,
-          epochs=100, batch_size=8, lr=1e-3, weight_decay=1e-4, num_workers=2):
-    """Trains one U-Net run. Saves last.pt, best.pt and history.json in checkpoint_root/unet_<modality>_seed<seed>.
-    If last.pt exists, training continues from the epoch after the saved one."""
+          epochs=100, batch_size=8, lr=1e-3, weight_decay=1e-4, num_workers=2,
+          train_chip_ids=None, run_name=None):
+    """Trains one U-Net run. Saves last.pt, best.pt and history.json in checkpoint_root/<run_name>
+    (default run name: unet_<modality>_seed<seed>). If last.pt exists, training continues from the next epoch.
+
+    train_chip_ids: optional subset of training chips (label-fraction runs). Each epoch always draws as many
+    samples as the full official training split, so the number of weight updates does not depend on the subset."""
     device = torch.device("cuda")
-    run_dir = Path(checkpoint_root) / f"unet_{modality}_seed{seed}"
+    run_dir = Path(checkpoint_root) / (run_name or f"unet_{modality}_seed{seed}")
     run_dir.mkdir(parents=True, exist_ok=True)
     set_seed(seed)
 
     # Data: training chips with random flips; validation chips without flips
-    train_ds = Sen1Floods11(data_root, "train", modality, stats_path, augment=True)
+    train_ds = Sen1Floods11(data_root, "train", modality, stats_path, augment=True, chip_ids=train_chip_ids)
     valid_ds = Sen1Floods11(data_root, "valid", modality, stats_path, augment=False)
+
+    # Samples per epoch = size of the full training split; a smaller subset is drawn repeatedly in new random orders
     generator = torch.Generator().manual_seed(seed)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, drop_last=True,
-                              num_workers=num_workers, generator=generator)
+    epoch_samples = len(read_split(data_root, "train"))
+    sampler = RandomSampler(train_ds, replacement=False, num_samples=epoch_samples, generator=generator)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, sampler=sampler, drop_last=True,
+                              num_workers=num_workers)
     valid_loader = DataLoader(valid_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     # Model, optimiser, cosine learning-rate schedule, mixed-precision scaler and losses
@@ -109,6 +118,7 @@ def train(data_root, stats_path, checkpoint_root, modality, seed,
             "train_loss": loss_sum / len(train_loader),
             "valid_iou": valid_iou,
             "lr": epoch_lr,
+            "train_chips": len(train_ds),
             "seconds": time.time() - t0,
         })
 

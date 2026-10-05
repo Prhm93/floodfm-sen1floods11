@@ -14,7 +14,7 @@ import numpy as np
 import torch
 from segmentation_models_pytorch.losses import DiceLoss
 from terratorch.models import EncoderDecoderFactory
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 from floodfm.data import read_split, read_chip
 from floodfm.metrics import confusion_counts, add_counts, scores
@@ -37,13 +37,14 @@ EVAL_SPLITS = ["valid", "test", "bolivia"]
 class PrithviSen1Floods11(Dataset):
     """One item is one chip: six Sentinel-2 bands (6, H, W) float32 and the label (H, W) int64.
 
+    chip_ids: optional list of chips; when given, it replaces the chips of the official split.
     Band values are multiplied by 0.0001, NaN values are replaced with 0, then each band is normalised.
     augment=True applies a random D4 transform: one of four rotations by 90 degrees, with or without a flip.
     """
 
-    def __init__(self, data_root, split, augment=False):
+    def __init__(self, data_root, split, augment=False, chip_ids=None):
         self.data_root = data_root
-        self.chip_ids = read_split(data_root, split)
+        self.chip_ids = list(chip_ids) if chip_ids is not None else read_split(data_root, split)
         self.augment = augment
         self.mean = np.array(MEANS, dtype="float32")[:, None, None]
         self.std = np.array(STDS, dtype="float32")[:, None, None]
@@ -120,25 +121,34 @@ def validate(model, loader, device, loss_fn):
 
 
 def train_prithvi(data_root, checkpoint_root, mode, seed, epochs=100, batch_size=8,
-                  lr=1e-4, weight_decay=0.1, num_workers=2, accum_steps=1):
+                  lr=1e-4, weight_decay=0.1, num_workers=2, accum_steps=1,
+                  train_chip_ids=None, run_name=None):
     """Trains one Prithvi run (mode "frozen" or "full"). Saves last.pt, best.pt and history.json in
-    checkpoint_root/prithvi_<mode>_seed<seed>. If last.pt exists, training continues from the next epoch.
+    checkpoint_root/<run_name> (default run name: prithvi_<mode>_seed<seed>).
+    If last.pt exists, training continues from the next epoch.
 
     accum_steps > 1 enables gradient accumulation: each step loads batch_size // accum_steps chips, and the
     weights are updated after accum_steps steps, so one update still uses batch_size chips. An incomplete
-    group at the end of an epoch is discarded, in the same way as drop_last for a full batch."""
+    group at the end of an epoch is discarded, in the same way as drop_last for a full batch.
+
+    train_chip_ids: optional subset of training chips (label-fraction runs). Each epoch always draws as many
+    samples as the full official training split, so the number of weight updates does not depend on the subset."""
     device = torch.device("cuda")
-    run_dir = Path(checkpoint_root) / f"prithvi_{mode}_seed{seed}"
+    run_dir = Path(checkpoint_root) / (run_name or f"prithvi_{mode}_seed{seed}")
     run_dir.mkdir(parents=True, exist_ok=True)
     set_seed(seed)
     micro_batch = batch_size // accum_steps
 
-    # Data: training chips with D4 transforms (micro-batches); validation chips without transforms
-    train_ds = PrithviSen1Floods11(data_root, "train", augment=True)
+    # Data: training chips with D4 transforms; validation chips without transforms
+    train_ds = PrithviSen1Floods11(data_root, "train", augment=True, chip_ids=train_chip_ids)
     valid_ds = PrithviSen1Floods11(data_root, "valid", augment=False)
+
+    # Samples per epoch = size of the full training split; a smaller subset is drawn repeatedly in new random orders
     generator = torch.Generator().manual_seed(seed)
-    train_loader = DataLoader(train_ds, batch_size=micro_batch, shuffle=True, drop_last=True,
-                              num_workers=num_workers, generator=generator)
+    epoch_samples = len(read_split(data_root, "train"))
+    sampler = RandomSampler(train_ds, replacement=False, num_samples=epoch_samples, generator=generator)
+    train_loader = DataLoader(train_ds, batch_size=micro_batch, sampler=sampler, drop_last=True,
+                              num_workers=num_workers)
     valid_loader = DataLoader(valid_ds, batch_size=micro_batch, shuffle=False, num_workers=num_workers)
 
     # Model, optimiser over trainable weights only, plateau schedule on validation loss, scaler, Dice loss
@@ -200,6 +210,7 @@ def train_prithvi(data_root, checkpoint_root, mode, seed, epochs=100, batch_size
             "micro_batch": micro_batch,
             "accum_steps": accum_steps,
             "updates": n_updates,
+            "train_chips": len(train_ds),
             "seconds": time.time() - t0,
         })
 

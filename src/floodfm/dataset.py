@@ -16,15 +16,16 @@ class Sen1Floods11(Dataset):
     """One item is one chip: a normalised image (C, H, W) float32 and a label (H, W) int64.
 
     modality: "s1" (VV, VH), "s2" (13 bands) or "s2_6" (the six Prithvi bands B2, B3, B4, B8A, B11, B12).
+    chip_ids: optional list of chips; when given, it replaces the chips of the official split.
     Normalisation uses per-band mean and std from the training split (stats_path).
     Missing input values (NaN in S1, 0 in S2) are set to 0 after normalisation, which equals the training mean.
     Label values: 1 water, 0 not water, -1 no data (ignored by the loss and the scores).
     augment=True applies random horizontal and vertical flips to the image and the label together.
     """
 
-    def __init__(self, data_root, split, modality, stats_path, augment=False):
+    def __init__(self, data_root, split, modality, stats_path, augment=False, chip_ids=None):
         self.data_root = data_root
-        self.chip_ids = read_split(data_root, split)
+        self.chip_ids = list(chip_ids) if chip_ids is not None else read_split(data_root, split)
         self.modality = modality
         all_stats = json.loads(Path(stats_path).read_text())
         if modality == "s2_6":

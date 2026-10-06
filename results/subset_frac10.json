@@ -1,0 +1,32 @@
+{
+  "fraction": 0.1,
+  "subset_seed": 0,
+  "chips": [
+    "Ghana_11745",
+    "Ghana_156478",
+    "Ghana_7496",
+    "India_324254",
+    "India_383430",
+    "India_698338",
+    "India_73419",
+    "Mekong_1282475",
+    "Mekong_1396181",
+    "Nigeria_952958",
+    "Pakistan_667363",
+    "Pakistan_740461",
+    "Paraguay_191503",
+    "Paraguay_246154",
+    "Paraguay_792268",
+    "Paraguay_997480",
+    "Somalia_886726",
+    "Somalia_992457",
+    "Spain_2938657",
+    "Spain_7856615",
+    "Sri-Lanka_52223",
+    "Sri-Lanka_847275",
+    "USA_347609",
+    "USA_652955",
+    "USA_655230",
+    "USA_84195"
+  ]
+}

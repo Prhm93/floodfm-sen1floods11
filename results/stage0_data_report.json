@@ -1,0 +1,59 @@
+{
+  "created": "2026-10-01T01:10:38",
+  "source": "Sen1Floods11 v1.1, gs://sen1floods11/v1.1 (github.com/cloudtostreet/Sen1Floods11)",
+  "files_per_layer": {
+    "S1Hand": 446,
+    "S2Hand": 446,
+    "LabelHand": 446
+  },
+  "chips_per_split": {
+    "train": 252,
+    "valid": 89,
+    "test": 90,
+    "bolivia": 15
+  },
+  "unique_chips": 446,
+  "chips_in_more_than_one_split": [],
+  "missing_files": [],
+  "events_per_split": {
+    "train": {
+      "Ghana": 31,
+      "India": 40,
+      "Mekong": 18,
+      "Nigeria": 10,
+      "Pakistan": 16,
+      "Paraguay": 39,
+      "Somalia": 15,
+      "Spain": 18,
+      "Sri-Lanka": 24,
+      "USA": 41
+    },
+    "valid": {
+      "Ghana": 11,
+      "India": 14,
+      "Mekong": 6,
+      "Nigeria": 4,
+      "Pakistan": 6,
+      "Paraguay": 14,
+      "Somalia": 5,
+      "Spain": 6,
+      "Sri-Lanka": 9,
+      "USA": 14
+    },
+    "test": {
+      "Ghana": 11,
+      "India": 14,
+      "Mekong": 6,
+      "Nigeria": 4,
+      "Pakistan": 6,
+      "Paraguay": 14,
+      "Somalia": 6,
+      "Spain": 6,
+      "Sri-Lanka": 9,
+      "USA": 14
+    },
+    "bolivia": {
+      "Bolivia": 15
+    }
+  }
+}

@@ -1,0 +1,19 @@
+comparison,split,A,B,diff_A_minus_B,ci_low,ci_high,verdict
+"Band-matched U-Net vs Prithvi frozen, all labels",test,"U-Net optical, 6 bands","Prithvi frozen, 6 bands",0.005326362453016209,-0.0024235440194722373,0.012386090303280639,not clear (interval includes 0)
+"Band-matched U-Net vs Prithvi frozen, all labels",bolivia,"U-Net optical, 6 bands","Prithvi frozen, 6 bands",0.035815165568231944,-0.01424020136913636,0.1547978575688932,not clear (interval includes 0)
+"Band-matched U-Net vs Prithvi frozen, 10% labels",test,"U-Net optical, 6 bands, 10% labels","Prithvi frozen, 6 bands, 10% labels",0.037490400812958846,0.017720052717538393,0.06823743454774985,A better
+"Band-matched U-Net vs Prithvi frozen, 10% labels",bolivia,"U-Net optical, 6 bands, 10% labels","Prithvi frozen, 6 bands, 10% labels",0.011968342629351092,-0.036093011087614646,0.06332868751382223,not clear (interval includes 0)
+"Prithvi full vs frozen, all labels (full: 1 seed)",test,"Prithvi full, 6 bands","Prithvi frozen, 6 bands",-0.011852138447813187,-0.034291560363278226,0.004674098123668587,not clear (interval includes 0)
+"Prithvi full vs frozen, all labels (full: 1 seed)",bolivia,"Prithvi full, 6 bands","Prithvi frozen, 6 bands",0.01330133274634826,-0.020474817239146,0.06900031536159391,not clear (interval includes 0)
+U-Net 6 bands vs 13 bands,test,"U-Net optical, 6 bands","U-Net optical, 13 bands",0.00902202779525818,-0.0030545419914178445,0.029676708086581006,not clear (interval includes 0)
+U-Net 6 bands vs 13 bands,bolivia,"U-Net optical, 6 bands","U-Net optical, 13 bands",0.016006652734172233,0.0015631094588040545,0.06067526939780106,A better
+U-Net optical vs radar,test,"U-Net optical, 13 bands","U-Net radar, 2 bands",0.15347729303892155,0.09227353153474198,0.22616145109783722,A better
+U-Net optical vs radar,bolivia,"U-Net optical, 13 bands","U-Net radar, 2 bands",0.1422263735123126,0.056890146426703356,0.2384768275605965,A better
+U-Net radar vs fixed threshold,test,"U-Net radar, 2 bands",Fixed VH threshold,0.14304696137440998,0.10999732672101187,0.18154323825664118,A better
+U-Net radar vs fixed threshold,bolivia,"U-Net radar, 2 bands",Fixed VH threshold,0.09212129285727033,0.02755914240176597,0.14165891468196393,A better
+Fixed threshold vs Otsu,test,Fixed VH threshold,Otsu (VH),0.2940652759582237,0.20581229320968544,0.3747439890005928,A better
+Fixed threshold vs Otsu,bolivia,Fixed VH threshold,Otsu (VH),0.1282319459466864,-0.03998154665590192,0.2636388151979553,not clear (interval includes 0)
+U-Net 6 bands: all labels vs 10%,test,"U-Net optical, 6 bands","U-Net optical, 6 bands, 10% labels",0.001321447232722317,-0.006279495226731749,0.007700962341943031,not clear (interval includes 0)
+U-Net 6 bands: all labels vs 10%,bolivia,"U-Net optical, 6 bands","U-Net optical, 6 bands, 10% labels",0.014771564137966209,0.002623615869226495,0.04317862473128773,A better
+Prithvi frozen: all labels vs 10%,test,"Prithvi frozen, 6 bands","Prithvi frozen, 6 bands, 10% labels",0.033485485592664954,0.01570727313415675,0.061760670348273795,A better
+Prithvi frozen: all labels vs 10%,bolivia,"Prithvi frozen, 6 bands","Prithvi frozen, 6 bands, 10% labels",-0.009075258800914643,-0.11587177901652262,0.05132002511729813,not clear (interval includes 0)

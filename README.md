@@ -8,6 +8,8 @@ The project is a small, controlled test. It is not a research paper.
 
 Author: Parham Imanzadeh Charandabi. Contact: pimanzadeh.ch@gmail.com
 
+**Full report:** [reports/Final_Report.md](reports/Final_Report.md). Reports of each stage are in the same folder.
+
 ![Design of the experiment](figures/fig0_design.png)
 
 ---
@@ -237,6 +239,7 @@ Approximate time for one epoch on the T4: U-Net radar 10 s, U-Net optical 13 ban
 src/floodfm/       data.py, dataset.py, metrics.py, baselines.py, train.py, evaluate.py, prithvi.py
 notebooks/         00_setup ... 05_analysis
 scripts/           make_figures.py, make_tables.py, make_bolivia_panels.py
+reports/           Final_Report.md and the reports of Stages 0 to 5
 results/           4 CSV tables (final_results, paired_differences, per_event_test, difficult_chips),
                    21 results files (JSON, counts of each chip), norm_stats.json, subset_frac10.json
 figures/           fig0 ... fig5
